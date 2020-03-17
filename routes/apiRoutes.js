@@ -3,11 +3,13 @@
 var express = require('express');
 var config = require('../config');
 const customerValidator = require('../middlewares/validators/customer/customer-validator');
+const musicValidator = require('../middlewares/validators/customer/music-validator');
 const jwtTokenValidator = require('../middlewares/jwt-validation-middlewares');
 
 /** Import Services */
 var registerService = require('../services/registerService');
 var cmsService = require('../services/cmsService');
+var musicService = require('../services/musicService');
 
 var api = express.Router();
 api.use(express.json());
@@ -101,6 +103,20 @@ api.post('/verifyEmail',jwtTokenValidator.validateToken,customerValidator.verify
 /** Get CMS Pages */
 api.post('/getCmsPages', function(req, res) {
     cmsService.getCms(req.body, function(result) {
+        res.send(result);
+    });
+});
+
+/** Get All Categories */
+api.post('/getAllCategories',jwtTokenValidator.validateToken,musicValidator.getCategory, function(req, res) {
+    musicService.getAllCategory(req.body, function(result) {
+        res.send(result);
+    });
+});
+
+/** User Post */
+api.post('/userPost',jwtTokenValidator.validateToken,musicValidator.userPost, function(req, res) {
+    musicService.userPost(req, function(result) {
         res.send(result);
     });
 });

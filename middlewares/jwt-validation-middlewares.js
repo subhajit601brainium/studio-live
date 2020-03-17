@@ -26,8 +26,8 @@ exports.validateToken = async (req, res, next) => {
                         });
                     }
                     else {
-                        console.log(req.body.customerId);
-                         console.log(decoded.subject);
+                        // console.log(req.body.customerId);
+                        //  console.log(decoded.subject);
                          //VALID USER CHECK
                          if (req.body.customerId != decoded.subject) {
                             res.status(401).send({

@@ -1,14 +1,14 @@
 var mongoose = require('mongoose');
-var bcrypt = require('bcryptjs');
 
 var Schema = mongoose.Schema;
 var userPostSchema = new Schema({
-    title: {type: String, default: '', required: true},
+    title: { type: String, default: '', required: true },
     categoryId: { type: mongoose.Schema.Types.ObjectId, required: true },
-    file: {type: String, default: ''},
-    fileType: {type: String, enum: ['AUDIO', 'VIDEO']},
-    studioPrivacy: {type: String, enum: ['PUBLIC', 'PRIVATE','OPEN MIC']},
-    location: {type: String, default: ''},
+    file: { type: String, default: '' },
+    fileType: { type: String, enum: ['AUDIO', 'VIDEO'] },
+    studioPrivacy: { type: String, enum: ['PUBLIC', 'PRIVATE', 'OPEN MIC'] },
+    location: { type: String, default: '' }
+}, {
     timestamps: true
 });
 
