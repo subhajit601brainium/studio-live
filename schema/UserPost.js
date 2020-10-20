@@ -2,6 +2,7 @@ var mongoose = require('mongoose');
 
 var Schema = mongoose.Schema;
 var userPostSchema = new Schema({
+    customerId: { type: String, default: '', required: true },
     title: { type: String, default: '', required: true },
     categoryId: { type: mongoose.Schema.Types.ObjectId, required: true },
     file: { type: String, default: '' },

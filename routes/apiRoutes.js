@@ -121,5 +121,40 @@ api.post('/userPost',jwtTokenValidator.validateToken,musicValidator.userPost, fu
     });
 });
 
+/** User Post */
+api.post('/myPost',jwtTokenValidator.validateToken,musicValidator.myPost, function(req, res) {
+    musicService.myPost(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** User Edit Post */
+api.post('/updatePost',jwtTokenValidator.validateToken,musicValidator.updatePost, function(req, res) {
+    musicService.updatePost(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** User Post */
+api.post('/deletePost',jwtTokenValidator.validateToken,musicValidator.deletePost, function(req, res) {
+    musicService.deletePost(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** User Like/Unlike */
+api.post('/musicLikeUnlike',jwtTokenValidator.validateToken,musicValidator.musicLikeUnlike, function(req, res) {
+    musicService.musicLikeUnlike(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** User Favourite/UnFavourite */
+api.post('/musicFavouriteUnfavourite',jwtTokenValidator.validateToken,musicValidator.musicFavouriteUnfavourite, function(req, res) {
+    musicService.musicFavouriteUnfavourite(req, function(result) {
+        res.send(result);
+    });
+});
+
 
 module.exports = api;
