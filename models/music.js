@@ -282,7 +282,7 @@ var userModel = {
                             //Like
                             myMusicAobj.likeNo = await userLikeSchema.countDocuments({ postId: myMc._id });
 
-                            var isLike = await userLikeSchema.countDocuments({ likeCustomerId: reqBody.customerId });
+                            var isLike = await userLikeSchema.countDocuments({ likeCustomerId: reqBody.customerId, postId: myMc._id });
                             if (isLike > 0) {
                                 myMusicAobj.isLike = true;
                             } else {
@@ -295,7 +295,7 @@ var userModel = {
                             //Favourite
                             myMusicAobj.favouriteNo = await userFavouriteSchema.countDocuments({ postId: myMc._id });;
 
-                            var isFavourite = await userFavouriteSchema.countDocuments({ favouriteCustomerId: reqBody.customerId });
+                            var isFavourite = await userFavouriteSchema.countDocuments({ favouriteCustomerId: reqBody.customerId, postId: myMc._id });
                             if (isFavourite > 0) {
                                 myMusicAobj.isFavourite = true;
                             } else {
@@ -395,7 +395,7 @@ var userModel = {
             userPostSchema.findOne({ customerId: reqBody.customerId, _id: reqBody.musicId })
                 .then(async function (myMusic) {
 
-                    if (myMusic != null) {
+                    if (myMusic != null) { 
 
                         var userLikes = await userLikeSchema.findOne({ postId: reqBody.musicId, likeCustomerId: reqBody.likeCustomerId });
                         if (reqBody.like == 'YES') {

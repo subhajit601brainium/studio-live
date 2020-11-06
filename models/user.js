@@ -787,7 +787,7 @@ var userModel = {
             }
             var connectedUserObj = await connectedUserSchema.find(connectedFromUserObj);
 
-            var connectedUserArr = [];
+            var connectedUserArr = [(customerId).toString()];
             if (connectedUserObj.length > 0) {
                 for (let connUser of connectedUserObj) {
                     if (connUser.fromCustomerId == customerId) {
@@ -799,11 +799,8 @@ var userModel = {
                 }
             }
 
-            var userCond = { _id: { $ne: customerId } };
-
-            if (connectedUserArr.length > 0) {
-                userCond._id = { $nin: connectedUserArr };
-            }
+            var userCond = {};
+            userCond._id = { $nin: connectedUserArr };
 
             userSchema.find(userCond)
                 .then(async (users) => {
@@ -1067,7 +1064,8 @@ var userModel = {
                                                 response_data: {}
                                             });
                                         } else {
-
+                                            sendRequestSchema.deleteOne({ _id: sendReq._id }, function (err) {});
+                                            userNotificationSchema.deleteOne({ customerId: sendReq.toCustomerId, notificationType: 'REQUEST_RECEIVE', otherData: sendReq.fromCustomerId }, function (err) {});
                                             callBack({
                                                 success: true,
                                                 STATUSCODE: 200,
@@ -1091,6 +1089,10 @@ var userModel = {
                                         response_data: {}
                                     });
                                 } else {
+
+                                   sendRequestSchema.deleteOne({ _id: sendReq._id }, function (err) {});
+                                    userNotificationSchema.deleteOne({ customerId: sendReq.toCustomerId, notificationType: 'REQUEST_RECEIVE', otherData: sendReq.fromCustomerId }, function (err) {});
+
                                     callBack({
                                         success: true,
                                         STATUSCODE: 200,
@@ -1130,14 +1132,37 @@ var userModel = {
             var customerId = data.body.customerId;
 
             userNotificationSchema
-                .find({customerId: customerId})
-                .sort({createdAr: 'desc'})
+                .find({ customerId: customerId })
+                .sort({ createdAr: 'desc' })
                 .then(async (userNotification) => {
+                    var userNotArr = [];
+                    if(userNotification.length > 0) {
+                        for(let userNot of userNotification) {
+                            var userNotObj = {
+                                customerId: userNot.customerId,
+                                notificationType: userNot.notificationType,
+                                title: userNot.title,
+                                message: userNot.message,
+                                otherData: userNot.otherData
+                            }
+
+                            if(userNot.notificationType == 'REQUEST_RECEIVE') {
+                                var sendUser = await userSchema.findOne({_id: userNot.otherData});
+
+                                if(sendUser != null) {
+                                    userNotObj.sendUserEmail = sendUser.email,
+                                    userNotObj.profileImage = `${config.serverhost}:${config.port}/img/profile-pic/` + sendUser.profileImage
+                                }
+                            }
+
+                            userNotArr.push(userNotObj);
+                        }
+                    }
                     callBack({
                         success: true,
                         STATUSCODE: 200,
                         message: 'User notification',
-                        response_data: {userNot: userNotification}
+                        response_data: { userNot: userNotArr }
                     });
 
                 })
