@@ -271,7 +271,8 @@ var userModel = {
                                 fileType: myMc.fileType,
                                 studioPrivacy: myMc.studioPrivacy,
                                 createdAt: myMc.createdAt,
-                                updatedAt: myMc.updatedAt
+                                updatedAt: myMc.updatedAt,
+                                customerId: myMc.customerId
                             }
 
                             //Category
@@ -279,13 +280,27 @@ var userModel = {
                             myMusicAobj.musicCategory = musicCategory.categoryName;
 
                             //Like
-                            myMusicAobj.likeNo = await userLikeSchema.countDocuments({ postId: myMc._id});
+                            myMusicAobj.likeNo = await userLikeSchema.countDocuments({ postId: myMc._id });
+
+                            var isLike = await userLikeSchema.countDocuments({ likeCustomerId: reqBody.customerId });
+                            if (isLike > 0) {
+                                myMusicAobj.isLike = true;
+                            } else {
+                                myMusicAobj.isLike = false;
+                            }
 
                             //Comment
                             myMusicAobj.commentNo = 0;
 
                             //Favourite
-                            myMusicAobj.isFavourite = await userFavouriteSchema.countDocuments({ postId: myMc._id});;
+                            myMusicAobj.favouriteNo = await userFavouriteSchema.countDocuments({ postId: myMc._id });;
+
+                            var isFavourite = await userFavouriteSchema.countDocuments({ favouriteCustomerId: reqBody.customerId });
+                            if (isFavourite > 0) {
+                                myMusicAobj.isFavourite = true;
+                            } else {
+                                myMusicAobj.isFavourite = false;
+                            }
 
                             //Customer
                             myMusicAobj.customerName = '';

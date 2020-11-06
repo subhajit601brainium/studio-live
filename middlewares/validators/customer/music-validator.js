@@ -150,6 +150,75 @@ module.exports = {
             next();
         }
     },
+    fetchAllUser: async (req, res, next) => {
+        const rules = joi.object({
+            customerId: joi.string().required().error(new Error('Customer id is required'))
+        });
+
+        const value = await rules.validate(req.body);
+        if (value.error) {
+            res.status(422).json({
+                success: false,
+                STATUSCODE: 422,
+                message: value.error.message
+            })
+        } else {
+            next();
+        }
+    },
+    sendRequest: async (req, res, next) => {
+        const rules = joi.object({
+            customerId: joi.string().required().error(new Error('Customer id is required')),
+            toCustomerId: joi.string().required().error(new Error('To Customer id is required'))
+        });
+
+        const value = await rules.validate(req.body);
+        if (value.error) {
+            res.status(422).json({
+                success: false,
+                STATUSCODE: 422,
+                message: value.error.message
+            })
+        } else {
+            next();
+        }
+    },
+    acceptRequest: async (req, res, next) => {
+        const inputVal = ["YES", "NO"];
+        const rules = joi.object({
+            customerId: joi.string().required().error(new Error('Customer id is required')),
+            toCustomerId: joi.string().required().error(new Error('To Customer id is required')),
+            isAccept: joi.string().required().valid(...inputVal).error(new Error('Like true false is required'))
+        });
+
+        const value = await rules.validate(req.body);
+        if (value.error) {
+            res.status(422).json({
+                success: false,
+                STATUSCODE: 422,
+                message: value.error.message
+            })
+        } else {
+            next();
+        }
+    },
+    fetchNotification: async (req, res, next) => {
+        const inputVal = ["YES", "NO"];
+        const rules = joi.object({
+            customerId: joi.string().required().error(new Error('Customer id is required'))
+        });
+
+        const value = await rules.validate(req.body);
+        if (value.error) {
+            res.status(422).json({
+                success: false,
+                STATUSCODE: 422,
+                message: value.error.message
+            })
+        } else {
+            next();
+        }
+    },
 }
 
 

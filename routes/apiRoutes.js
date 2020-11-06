@@ -156,5 +156,41 @@ api.post('/musicFavouriteUnfavourite',jwtTokenValidator.validateToken,musicValid
     });
 });
 
+/** All User */
+api.post('/fetchAllUser',jwtTokenValidator.validateToken,musicValidator.fetchAllUser, function(req, res) {
+    registerService.fetchAllUser(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** All Connected User */
+api.post('/fetchAllConnectedUser',jwtTokenValidator.validateToken,musicValidator.fetchAllUser, function(req, res) {
+    registerService.fetchAllConnectedUser(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** Send Request */
+api.post('/sendRequest',jwtTokenValidator.validateToken,musicValidator.sendRequest, function(req, res) {
+    registerService.sendRequest(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** Accept Request */
+api.post('/acceptRequest',jwtTokenValidator.validateToken,musicValidator.acceptRequest, function(req, res) {
+    registerService.acceptRequest(req, function(result) {
+        res.send(result);
+    });
+});
+
+/** Notification */
+api.post('/fetchNotification',jwtTokenValidator.validateToken,musicValidator.fetchNotification, function(req, res) {
+    registerService.fetchNotification(req, function(result) {
+        res.send(result);
+    });
+});
+
+
 
 module.exports = api;

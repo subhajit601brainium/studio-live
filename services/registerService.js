@@ -366,6 +366,106 @@ var regiterService = {
                 callBack(result);
             }
         });
+    },
+    fetchAllUser: (data, callBack) => {
+        async.waterfall([
+            function(nextCb) {
+                userModel.fetchAllUser(data, function(result) {
+                    nextCb(null, result);
+                });
+            }
+        ], function(err, result) {
+            if (err) {
+                callBack({
+                    success: false,
+                    STATUSCODE: 403,
+                    message: 'Request Forbidden',
+                    response_data: {}
+                })
+            } else {
+                callBack(result);
+            }
+        });
+    },
+    fetchAllConnectedUser: (data, callBack) => {
+        async.waterfall([
+            function(nextCb) {
+                userModel.fetchAllConnectedUser(data, function(result) {
+                    nextCb(null, result);
+                });
+            }
+        ], function(err, result) {
+            if (err) {
+                callBack({
+                    success: false,
+                    STATUSCODE: 403,
+                    message: 'Request Forbidden',
+                    response_data: {}
+                })
+            } else {
+                callBack(result);
+            }
+        });
+    },
+    sendRequest: (data, callBack) => {
+        async.waterfall([
+            function(nextCb) {
+                userModel.sendRequest(data, function(result) {
+                    nextCb(null, result);
+                });
+            }
+        ], function(err, result) {
+            if (err) {
+                callBack({
+                    success: false,
+                    STATUSCODE: 403,
+                    message: 'Request Forbidden',
+                    response_data: {}
+                })
+            } else {
+                callBack(result);
+            }
+        });
+    },
+    acceptRequest: (data, callBack) => {
+        async.waterfall([
+            function(nextCb) {
+                userModel.acceptRequest(data, function(result) {
+                    nextCb(null, result);
+                });
+            }
+        ], function(err, result) {
+            if (err) {
+                callBack({
+                    success: false,
+                    STATUSCODE: 403,
+                    message: 'Request Forbidden',
+                    response_data: {}
+                })
+            } else {
+                callBack(result);
+            }
+        });
+    },
+    fetchNotification: (data, callBack) => {
+        async.waterfall([
+            function(nextCb) {
+                userModel.fetchNotification(data, function(result) {
+                    nextCb(null, result);
+                });
+            }
+        ], function(err, result) {
+            if (err) {
+                callBack({
+                    success: false,
+                    STATUSCODE: 403,
+                    message: 'Request Forbidden',
+                    response_data: {}
+                })
+            } else {
+                callBack(result);
+            }
+        });
     }
 }
 

@@ -3,6 +3,9 @@ var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
 var config = require('../config');
 var userSchema = require('../schema/User');
+var connectedUserSchema = require('../schema/ConnectUser');
+var sendRequestSchema = require('../schema/SendRequest');
+var userNotificationSchema = require('../schema/UserNotification');
 var mail = require('../modules/sendEmail');
 
 var userModel = {
@@ -180,7 +183,8 @@ var userModel = {
                             } else {
                                 let responseData = {
                                     userDetails: userData,
-                                    authToken: token
+                                    authToken: token,
+                                    imageUrl: `${config.serverhost}:${config.port}/img/profile-pic/` + userData.profileImage,
                                 }
                                 let responseMessage = '';
                                 if (type === 'verify') {
@@ -434,8 +438,8 @@ var userModel = {
     },
     viewProfile: (data, callBack) => {
         if (data) {
-
-            userSchema.findOne({ _id: data.customerId }, function (err, customer) {
+            var customerId = data.customerId;
+            userSchema.findOne({ _id: data.customerId }, async function (err, customer) {
                 if (err) {
                     callBack({
                         success: false,
@@ -445,12 +449,22 @@ var userModel = {
                     });
                 } else {
                     if (customer) {
+
+                        //CONNECTED_USER
+                        var connectedFromUserArr = [{ fromCustomerId: customerId }, { toCustomerId: customerId }]
+                        var connectedFromUserObj = {
+                            $or: connectedFromUserArr
+                        }
+                        var connectedUserCount = await connectedUserSchema.countDocuments(connectedFromUserObj);
+
+
                         let response = {
                             name: customer.name,
                             firstName: customer.firstName,
                             lastName: customer.lastName,
                             email: customer.email,
                             phone: Number(customer.phone),
+                            connectedUser: connectedUserCount
                         }
 
                         if (customer.profileImage != '') {
@@ -481,7 +495,7 @@ var userModel = {
     editProfile: (data, callBack) => {
         if (data) {
             /** Check for customer existence */
-          //  console.log(data);
+            //  console.log(data);
             userSchema.countDocuments({ email: data.email, _id: { $ne: data.customerId } }).exec(function (err, count) {
                 if (err) {
                     callBack({
@@ -651,11 +665,14 @@ var userModel = {
                                 });
                             } else {
                                 updateUser({ profileImage: file_name }, { _id: data.body.customerId });
+                                var customerObj = {};
+                                customerObj.profileImage = `${config.serverhost}:${config.port}/img/profile-pic/` + file_name
+
                                 callBack({
                                     success: true,
                                     STATUSCODE: 200,
                                     message: 'Profile image updated Successfully',
-                                    response_data: {}
+                                    response_data: customerObj
                                 })
                             }
                         });
@@ -737,26 +754,404 @@ var userModel = {
             dataVerify.email = data.newEmail;
 
             updateUser(dataVerify, { _id: data.customerId })
-            .then(function (res) {
-                console.log(res);
-                if(res) {
+                .then(function (res) {
+                    console.log(res);
+                    if (res) {
+                        callBack({
+                            success: true,
+                            STATUSCODE: 200,
+                            message: 'Email updated successfully.',
+                            response_data: {}
+                        });
+                    }
+                })
+                .catch(function (err) {
+                    console.log(err);
+                    callBack({
+                        success: false,
+                        STATUSCODE: 500,
+                        message: 'Something went wrong.',
+                        response_data: err
+                    });
+                })
+        }
+    },
+    fetchAllUser: async (data, callBack) => {
+        if (data) {
+            var customerId = data.body.customerId;
+
+            //CONNECTED_USER
+            var connectedFromUserArr = [{ fromCustomerId: customerId }, { toCustomerId: customerId }]
+            var connectedFromUserObj = {
+                $or: connectedFromUserArr
+            }
+            var connectedUserObj = await connectedUserSchema.find(connectedFromUserObj);
+
+            var connectedUserArr = [];
+            if (connectedUserObj.length > 0) {
+                for (let connUser of connectedUserObj) {
+                    if (connUser.fromCustomerId == customerId) {
+                        connectedUserArr.push(connUser.toCustomerId);
+                    } else {
+                        connectedUserArr.push(connUser.fromCustomerId);
+                    }
+
+                }
+            }
+
+            var userCond = { _id: { $ne: customerId } };
+
+            if (connectedUserArr.length > 0) {
+                userCond._id = { $nin: connectedUserArr };
+            }
+
+            userSchema.find(userCond)
+                .then(async (users) => {
+                    var userArr = [];
+                    if (users.length > 0) {
+                        for (let user of users) {
+
+                            var andReqCondObj = {};
+                            var reqArr = [];
+                            var reqCondOne = { $and: [{ fromCustomerId: (user._id).toString() }, { toCustomerId: customerId }] };
+                            var reqCondTwo = { $and: [{ fromCustomerId: customerId }, { toCustomerId: (user._id).toString() }] };
+
+                            reqArr.push(reqCondOne);
+                            reqArr.push(reqCondTwo);
+
+                            andReqCondObj['$or'] = reqArr;
+
+                            var sendReqObj = await sendRequestSchema.findOne(andReqCondObj);
+
+
+                            var userObj = {
+                                name: user.name,
+                                email: user.email,
+                                profileImage: `${config.serverhost}:${config.port}/img/profile-pic/` + user.profileImage,
+                                customerId: user._id,
+                                sendReq: 'NO'
+                            };
+
+                            if (sendReqObj != null) {
+                                if (sendReqObj.fromCustomerId == customerId) {
+                                    userObj.sendReq = 'REQUEST_SEND'
+                                } else {
+                                    userObj.sendReq = 'REQUEST_RECEIVE'
+                                }
+                            }
+                            userArr.push(userObj);
+                        }
+
+                    }
+
+
                     callBack({
                         success: true,
                         STATUSCODE: 200,
-                        message: 'Email updated successfully.',
+                        message: 'All users fetched successfully.',
+                        response_data: { users: userArr }
+                    })
+
+                })
+                .catch((error) => {
+                    console.log('error', error);
+                    callBack({
+                        success: false,
+                        STATUSCODE: 500,
+                        message: 'Internal error',
                         response_data: {}
                     });
-                }
-            })
-            .catch(function (err) {
-                console.log(err);
-                callBack({
-                    success: false,
-                    STATUSCODE: 500,
-                    message: 'Something went wrong.',
-                    response_data: err
-                });
-            })
+                })
+        }
+    },
+    fetchAllConnectedUser: (data, callBack) => {
+        if (data) {
+            var customerId = data.body.customerId;
+
+            var connectedFromUserArr = [{ fromCustomerId: customerId }, { toCustomerId: customerId }]
+
+            var connectedFromUserObj = {
+                $or: connectedFromUserArr
+            }
+            connectedUserSchema.find(connectedFromUserObj)
+                .then(async (connectedusers) => {
+                    var userArr = [];
+                    if (connectedusers.length > 0) {
+                        for (let connecteduser of connectedusers) {
+                            if (connecteduser.fromCustomerId == customerId) {
+                                var otherUser = await userSchema.findOne({ _id: connecteduser.toCustomerId });
+
+                                var userObj = {
+                                    name: otherUser.name,
+                                    email: otherUser.email,
+                                    profileImage: `${config.serverhost}:${config.port}/img/profile-pic/` + otherUser.profileImage,
+                                    customerId: otherUser._id
+                                };
+                            } else {
+                                var otherUser = await userSchema.findOne({ _id: connecteduser.fromCustomerId });
+
+                                var userObj = {
+                                    name: otherUser.name,
+                                    email: otherUser.email,
+                                    profileImage: `${config.serverhost}:${config.port}/img/profile-pic/` + otherUser.profileImage,
+                                    customerId: otherUser._id
+                                };
+                            }
+                            userArr.push(userObj);
+                        }
+                    }
+
+
+                    callBack({
+                        success: true,
+                        STATUSCODE: 200,
+                        message: 'All connected user fetched successfully.',
+                        response_data: { users: userArr }
+                    })
+
+                })
+                .catch((error) => {
+                    console.log('error', error);
+                    callBack({
+                        success: false,
+                        STATUSCODE: 500,
+                        message: 'Internal error',
+                        response_data: {}
+                    });
+                })
+        }
+    },
+    sendRequest: (data, callBack) => {
+        if (data) {
+            var customerId = data.body.customerId;
+            var toCustomerId = data.body.toCustomerId;
+
+            var andReqCondObj = {};
+            var reqArr = [];
+            var reqCondOne = { $and: [{ fromCustomerId: customerId }, { toCustomerId: toCustomerId }] };
+            var reqCondTwo = { $and: [{ fromCustomerId: toCustomerId }, { toCustomerId: customerId }] };
+
+            reqArr.push(reqCondOne);
+            reqArr.push(reqCondTwo);
+
+            andReqCondObj['$or'] = reqArr;
+
+
+
+            sendRequestSchema
+                .findOne(andReqCondObj)
+                .then(async (sendReq) => {
+                    if (sendReq == null) {
+                        var sendReqObj = {
+                            fromCustomerId: customerId,
+                            toCustomerId: toCustomerId,
+                            sendOn: new Date(),
+                            isAccepted: 'NO',
+                            acceptedOn: new Date(),
+                            acceptReject: 'ACCEPT'
+                        }
+
+                        new sendRequestSchema(sendReqObj).save(async function (err, result) {
+                            if (err) {
+                                console.log('err', err);
+                                callBack({
+                                    success: false,
+                                    STATUSCODE: 422,
+                                    message: 'Something went wrong.',
+                                    response_data: {}
+                                });
+                            } else {
+
+                                var userObj = await userSchema.findOne({ _id: customerId });
+                                var notificationObj = {
+                                    customerId: toCustomerId,
+                                    notificationType: 'REQUEST_RECEIVE',
+                                    title: userObj.name,
+                                    message: `${userObj.name} send a request`,
+                                    isRead: 'NO',
+                                    otherData: customerId
+                                }
+
+                                new userNotificationSchema(notificationObj).save(async function (err, not) {
+                                    if (err) {
+                                        console.log('err', err);
+                                        callBack({
+                                            success: false,
+                                            STATUSCODE: 422,
+                                            message: 'Something went wrong.',
+                                            response_data: {}
+                                        });
+                                    } else {
+
+                                        callBack({
+                                            success: true,
+                                            STATUSCODE: 200,
+                                            message: 'Request send successfully.',
+                                            response_data: {}
+                                        });
+                                    }
+                                });
+                            }
+                        })
+
+                    } else {
+                        callBack({
+                            success: true,
+                            STATUSCODE: 200,
+                            message: 'Request send successfully.',
+                            response_data: {}
+                        });
+                    }
+
+                })
+                .catch((error) => {
+                    console.log('error', error);
+                    callBack({
+                        success: false,
+                        STATUSCODE: 500,
+                        message: 'Internal error',
+                        response_data: {}
+                    });
+                })
+
+
+        }
+    },
+    acceptRequest: (data, callBack) => {
+        if (data) {
+            var customerId = data.body.customerId;
+            var toCustomerId = data.body.toCustomerId;
+            var isAccept = data.body.isAccept;
+
+            var andReqCondObj = {};
+            var reqArr = [];
+            var reqCondOne = { $and: [{ fromCustomerId: customerId }, { toCustomerId: toCustomerId }] };
+            var reqCondTwo = { $and: [{ fromCustomerId: toCustomerId }, { toCustomerId: customerId }] };
+
+            reqArr.push(reqCondOne);
+            reqArr.push(reqCondTwo);
+
+            andReqCondObj['$or'] = reqArr;
+
+            sendRequestSchema
+                .findOne(andReqCondObj)
+                .then(async (sendReq) => {
+                    if (sendReq != null) {
+
+                        if (isAccept == 'YES') {
+                            sendRequestSchema.updateOne({ _id: sendReq._id }, { $set: { isAccepted: 'YES', acceptedOn: new Date(), acceptReject: 'ACCEPT' } }, function (err, result) {
+                                if (err) {
+                                    console.log('err', err);
+                                    callBack({
+                                        success: false,
+                                        STATUSCODE: 500,
+                                        message: 'Internal error',
+                                        response_data: {}
+                                    });
+                                } else {
+
+                                    var connectedUserObj = {
+                                        fromCustomerId: sendReq.fromCustomerId,
+                                        toCustomerId: sendReq.toCustomerId,
+                                        addedOn: new Date()
+                                    }
+
+
+                                    new connectedUserSchema(connectedUserObj).save(function (err, result) {
+                                        if (err) {
+                                            console.log('err', err);
+                                            callBack({
+                                                success: false,
+                                                STATUSCODE: 422,
+                                                message: 'Something went wrong.',
+                                                response_data: {}
+                                            });
+                                        } else {
+
+                                            callBack({
+                                                success: true,
+                                                STATUSCODE: 200,
+                                                message: 'Request accepted successfully.',
+                                                response_data: {}
+                                            });
+                                        }
+                                    })
+
+
+                                }
+                            });
+
+                        } else {
+                            sendRequestSchema.updateOne({ _id: sendReq._id }, { $set: { isAccepted: 'YES', acceptedOn: new Date(), acceptReject: 'REJECT' } }, function (err, result) {
+                                if (err) {
+                                    callBack({
+                                        success: false,
+                                        STATUSCODE: 500,
+                                        message: 'Internal error',
+                                        response_data: {}
+                                    });
+                                } else {
+                                    callBack({
+                                        success: true,
+                                        STATUSCODE: 200,
+                                        message: 'Request rejected successfully.',
+                                        response_data: {}
+                                    })
+                                }
+                            });
+                        }
+
+
+                    } else {
+                        callBack({
+                            success: false,
+                            STATUSCODE: 422,
+                            message: 'Something went wrong.',
+                            response_data: {}
+                        });
+                    }
+
+                })
+                .catch((error) => {
+                    console.log('error', error);
+                    callBack({
+                        success: false,
+                        STATUSCODE: 500,
+                        message: 'Internal error',
+                        response_data: {}
+                    });
+                })
+
+
+        }
+    },
+    fetchNotification: (data, callBack) => {
+        if (data) {
+            var customerId = data.body.customerId;
+
+            userNotificationSchema
+                .find({customerId: customerId})
+                .sort({createdAr: 'desc'})
+                .then(async (userNotification) => {
+                    callBack({
+                        success: true,
+                        STATUSCODE: 200,
+                        message: 'User notification',
+                        response_data: {userNot: userNotification}
+                    });
+
+                })
+                .catch((error) => {
+                    console.log('error', error);
+                    callBack({
+                        success: false,
+                        STATUSCODE: 500,
+                        message: 'Internal error',
+                        response_data: {}
+                    });
+                })
+
+
         }
     }
 };
@@ -764,7 +1159,7 @@ var userModel = {
 
 function updateUser(update, cond) {
     return new Promise(function (resolve, reject) {
-        userSchema.update(cond, {
+        userSchema.updateOne(cond, {
             $set: update
         }, function (err, res) {
             if (err) {
