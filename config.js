@@ -1,5 +1,5 @@
 var config = {
-    port: 3087,
+    port: 3047,
     serverhost: 'http://localhost',
     environment: 'development', //development,staging,live
     secretKey: 'hyrgqwjdfbw4534efqrwer2q38945765',

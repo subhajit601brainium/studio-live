@@ -128,6 +128,13 @@ api.post('/myPost',jwtTokenValidator.validateToken,musicValidator.myPost, functi
     });
 });
 
+/** User Post */
+api.post('/home',jwtTokenValidator.validateToken,musicValidator.myPost, function(req, res) {
+    musicService.home(req, function(result) {
+        res.send(result);
+    });
+});
+
 /** User Edit Post */
 api.post('/updatePost',jwtTokenValidator.validateToken,musicValidator.updatePost, function(req, res) {
     musicService.updatePost(req, function(result) {

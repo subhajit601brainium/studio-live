@@ -3,6 +3,8 @@ var userPostSchema = require('../schema/UserPost');
 var categorySchema = require('../schema/Category');
 var userLikeSchema = require('../schema/UserLike');
 var userFavouriteSchema = require('../schema/UserFavourite');
+var connectedUserSchema = require('../schema/ConnectUser');
+var userSchema = require('../schema/User');
 
 var userModel = {
 
@@ -395,7 +397,7 @@ var userModel = {
             userPostSchema.findOne({ customerId: reqBody.customerId, _id: reqBody.musicId })
                 .then(async function (myMusic) {
 
-                    if (myMusic != null) { 
+                    if (myMusic != null) {
 
                         var userLikes = await userLikeSchema.findOne({ postId: reqBody.musicId, likeCustomerId: reqBody.likeCustomerId });
                         if (reqBody.like == 'YES') {
@@ -602,6 +604,124 @@ var userModel = {
                 });
         }
     },
+    home: async (data, callBack) => {
+        if (data) {
+            var reqBody = data.body;
+
+           
+
+            var customerId = reqBody.customerId;
+            var customerIdArr = [customerId];
+
+            var connectedFromUserArr = [{ fromCustomerId: customerId }, { toCustomerId: customerId }]
+
+            var connectedFromUserObj = {
+                $or: connectedFromUserArr
+            }
+
+            var connectedusers = await connectedUserSchema.find(connectedFromUserObj);
+
+            if (connectedusers.length > 0) {
+                for (let connecteduser of connectedusers) {
+                    var fromCustomerId = connecteduser.fromCustomerId;
+                    var toCustomerId = connecteduser.toCustomerId;
+                    customerIdArr.push(fromCustomerId.toString())
+                    customerIdArr.push(toCustomerId.toString())
+                }
+            }
+
+            
+            // return;
+
+            var customerIdArr = customerIdArr.filter(onlyUnique);
+
+            //console.log(customerIdArr);
+
+            // console.log(data);
+            userPostSchema.find({ customerId: {$in: customerIdArr} })
+                .then(async function (myMusic) {
+                  //  console.log(myMusic);
+                    var myMusicArr = [];
+                    if (myMusic.length > 0) {
+                        for (let myMc of myMusic) {
+                            var myMusicAobj = {
+                                title: myMc.title,
+                                file: myMc.file,
+                                location: myMc.location,
+                                musicId: myMc._id,
+                                fileType: myMc.fileType,
+                                studioPrivacy: myMc.studioPrivacy,
+                                createdAt: myMc.createdAt,
+                                updatedAt: myMc.updatedAt,
+                                customerId: myMc.customerId
+                            }
+
+                            //Category
+                            var musicCategory = await categorySchema.findOne({ _id: myMc.categoryId, isActive: true });
+                            myMusicAobj.musicCategory = musicCategory.categoryName;
+
+                            //Like
+                            myMusicAobj.likeNo = await userLikeSchema.countDocuments({ postId: myMc._id });
+
+                            var isLike = await userLikeSchema.countDocuments({ likeCustomerId: reqBody.customerId, postId: myMc._id });
+                            if (isLike > 0) {
+                                myMusicAobj.isLike = true;
+                            } else {
+                                myMusicAobj.isLike = false;
+                            }
+
+                            //Comment
+                            myMusicAobj.commentNo = 0;
+
+                            //Favourite
+                            myMusicAobj.favouriteNo = await userFavouriteSchema.countDocuments({ postId: myMc._id });;
+
+                            var isFavourite = await userFavouriteSchema.countDocuments({ favouriteCustomerId: reqBody.customerId, postId: myMc._id });
+                            if (isFavourite > 0) {
+                                myMusicAobj.isFavourite = true;
+                            } else {
+                                myMusicAobj.isFavourite = false;
+                            }
+
+                            //Customer
+                            var customerObj = await userSchema.findOne({ _id: myMc.customerId});
+                            myMusicAobj.customerName = `${customerObj.firstName} ${customerObj.lastName}`;
+                            myMusicAobj.profileImage =  `${config.serverhost}:${config.port}/img/profile-pic/${customerObj.profileImage}`;
+
+                            //console.log('myMusicAobj',myMusicAobj);
+
+                            myMusicArr.push(myMusicAobj);
+
+                           // console.log(myMusicArr);
+                        }
+                    }
+
+                    
+
+                    var respObj = {
+                        path: `${config.serverhost}:${config.port}/music/`,
+                        post: myMusicArr
+                    }
+
+                   
+                    callBack({
+                        success: true,
+                        STATUSCODE: 200,
+                        message: 'Home page post fetched successfully.',
+                        response_data: respObj
+                    });
+                })
+                .catch(function (err) {
+                    console.log(err);
+                    callBack({
+                        success: false,
+                        STATUSCODE: 500,
+                        message: 'Something went wrong.',
+                        response_data: {}
+                    });
+                });
+        }
+    },
 
 };
 
@@ -633,5 +753,10 @@ function uploadFile(file, folder, name) {
         });
     });
 }
+
+
+function onlyUnique(value, index, self) {
+    return self.indexOf(value) === index;
+  }
 
 module.exports = userModel;
